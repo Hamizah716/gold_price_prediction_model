@@ -4,10 +4,15 @@ import numpy as np
 import json
 import plotly.express as px
 import plotly.graph_objects as go
-from statsmodels.tsa.seasonal import STL
-from statsmodels.tsa.stattools import acf, pacf
 import warnings
 warnings.filterwarnings('ignore')
+
+try:
+    from statsmodels.tsa.seasonal import STL
+    from statsmodels.tsa.stattools import acf, pacf
+    STATSMODELS_AVAILABLE = True
+except Exception:
+    STATSMODELS_AVAILABLE = False
 
 from src.data_loader import DataLoader
 from src.models import ModelTrainer
@@ -62,8 +67,6 @@ with st.sidebar:
             st.rerun()
     else:
         st.markdown("**Source:** London Gold Fix (monthly, 2000–2025)")
-    n_models = len(models_to_show)
-    st.markdown(f"**Models:** {n_models} trained (Linear Regression, Random Forest{', XGBoost' if 'XGBoost' in models_to_show else ''}, Neural Network)")
     st.markdown("---")
     st.markdown("## Pipeline Steps")
     st.markdown("1. **Data Overview** — Quality report & feature engineering")
@@ -287,40 +290,49 @@ with tab3:
         st.plotly_chart(fig_hist, width='stretch')
 
     with col2:
-        st.subheader("STL Decomposition")
-        price_series = df.set_index('Date')['Price'].dropna()
-        if len(price_series) >= 24:
-            stl = STL(price_series, period=12)
-            res = stl.fit()
-            fig_stl = go.Figure()
-            fig_stl.add_trace(go.Scatter(x=price_series.index, y=res.trend,
-                                          mode='lines', name='Trend', line=dict(color='blue')))
-            fig_stl.add_trace(go.Scatter(x=price_series.index, y=res.seasonal,
-                                          mode='lines', name='Seasonal', line=dict(color='green')))
-            fig_stl.add_trace(go.Scatter(x=price_series.index, y=res.resid,
-                                          mode='lines', name='Residual', line=dict(color='gray')))
-            fig_stl.update_layout(title='Trend, Seasonal, Residual', height=400,
-                                   hovermode='x unified', margin=dict(l=0, r=0, t=30, b=0))
-            st.plotly_chart(fig_stl, width='stretch')
+        if STATSMODELS_AVAILABLE:
+            st.subheader("STL Decomposition")
+            price_series = df.set_index('Date')['Price'].dropna()
+            if len(price_series) >= 24:
+                try:
+                    stl = STL(price_series, period=12)
+                    res = stl.fit()
+                    fig_stl = go.Figure()
+                    fig_stl.add_trace(go.Scatter(x=price_series.index, y=res.trend,
+                                                  mode='lines', name='Trend', line=dict(color='blue')))
+                    fig_stl.add_trace(go.Scatter(x=price_series.index, y=res.seasonal,
+                                                  mode='lines', name='Seasonal', line=dict(color='green')))
+                    fig_stl.add_trace(go.Scatter(x=price_series.index, y=res.resid,
+                                                  mode='lines', name='Residual', line=dict(color='gray')))
+                    fig_stl.update_layout(title='Trend, Seasonal, Residual', height=400,
+                                           hovermode='x unified', margin=dict(l=0, r=0, t=30, b=0))
+                    st.plotly_chart(fig_stl, width='stretch')
+                except Exception:
+                    st.info("STL decomposition unavailable in this environment")
 
-        st.subheader("ACF / PACF Plots")
-        n_lags = 20
-        acf_vals = acf(price_series, nlags=n_lags)
-        pacf_vals = pacf(price_series, nlags=n_lags)
-        fig_acf = go.Figure()
-        fig_acf.add_trace(go.Bar(x=list(range(n_lags + 1)), y=acf_vals,
-                                  marker_color='#DAA520', name='ACF'))
-        fig_acf.update_layout(title='Autocorrelation Function (ACF)',
-                               height=200, margin=dict(l=0, r=0, t=25, b=0),
-                               xaxis_title='Lag', yaxis_title='ACF')
-        st.plotly_chart(fig_acf, width='stretch')
-        fig_pacf = go.Figure()
-        fig_pacf.add_trace(go.Bar(x=list(range(n_lags + 1)), y=pacf_vals,
-                                   marker_color='#2B579A', name='PACF'))
-        fig_pacf.update_layout(title='Partial Autocorrelation (PACF)',
-                                height=200, margin=dict(l=0, r=0, t=25, b=0),
-                                xaxis_title='Lag', yaxis_title='PACF')
-        st.plotly_chart(fig_pacf, width='stretch')
+            st.subheader("ACF / PACF Plots")
+            n_lags = 20
+            try:
+                acf_vals = acf(price_series, nlags=n_lags)
+                pacf_vals = pacf(price_series, nlags=n_lags)
+                fig_acf = go.Figure()
+                fig_acf.add_trace(go.Bar(x=list(range(n_lags + 1)), y=acf_vals,
+                                          marker_color='#DAA520', name='ACF'))
+                fig_acf.update_layout(title='Autocorrelation Function (ACF)',
+                                       height=200, margin=dict(l=0, r=0, t=25, b=0),
+                                       xaxis_title='Lag', yaxis_title='ACF')
+                st.plotly_chart(fig_acf, width='stretch')
+                fig_pacf = go.Figure()
+                fig_pacf.add_trace(go.Bar(x=list(range(n_lags + 1)), y=pacf_vals,
+                                           marker_color='#2B579A', name='PACF'))
+                fig_pacf.update_layout(title='Partial Autocorrelation (PACF)',
+                                        height=200, margin=dict(l=0, r=0, t=25, b=0),
+                                        xaxis_title='Lag', yaxis_title='PACF')
+                st.plotly_chart(fig_pacf, width='stretch')
+            except Exception:
+                st.info("ACF/PACF plots unavailable in this environment")
+        else:
+            st.info("Statsmodels not available — time-series plots disabled")
 
         st.subheader("Rolling Statistics (12-month)")
         df_roll = df.copy()
