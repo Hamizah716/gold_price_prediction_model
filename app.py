@@ -62,7 +62,8 @@ with st.sidebar:
             st.rerun()
     else:
         st.markdown("**Source:** London Gold Fix (monthly, 2000–2025)")
-    st.markdown("**Models:** Linear Regression, Random Forest, XGBoost, Neural Network")
+    n_models = len(models_to_show)
+    st.markdown(f"**Models:** {n_models} trained (Linear Regression, Random Forest{', XGBoost' if 'XGBoost' in models_to_show else ''}, Neural Network)")
     st.markdown("---")
     st.markdown("## Pipeline Steps")
     st.markdown("1. **Data Overview** — Quality report & feature engineering")
@@ -128,7 +129,7 @@ test_dates = data_dict['test_dates']
 train_df = data_dict['train_df']
 analyzer = EventAnalyzer()
 
-models_to_show = ['Linear Regression', 'Random Forest', 'XGBoost', 'Neural Network']
+models_to_show = list(results.keys())
 best_model = min(results, key=lambda k: results[k]['MAPE'])
 
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
@@ -170,7 +171,7 @@ with tab1:
         avg_price = df['Price'].mean()
         fig.add_hline(y=avg_price, line=dict(color='gray', dash='dot', width=1),
                        annotation_text=f'Avg: ${avg_price:.0f}')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     with col2:
         st.subheader("Key Findings")
@@ -194,7 +195,7 @@ with tab1:
                           color_continuous_scale='RdYlGn_r',
                           labels={'x': '', 'y': 'MAPE (%)'}, title='Model Comparison (MAPE)')
         fig_bar.update_layout(showlegend=False, height=250, margin=dict(l=0, r=0, t=30, b=0))
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(fig_bar, width='stretch')
 
 # ============================================================
 # TAB 2 — DATA & FEATURES
@@ -245,13 +246,13 @@ with tab2:
         fig_split = px.bar(split_data, x='Set', y='Rows', color='Set',
                             text='Rows', color_discrete_map={'Training': '#DAA520', 'Testing': '#2B579A'})
         fig_split.update_layout(showlegend=False, height=300, margin=dict(l=0, r=0, t=0, b=0))
-        st.plotly_chart(fig_split, use_container_width=True)
+        st.plotly_chart(fig_split, width='stretch')
 
         st.subheader("Full Dataset")
         display_cols = ['Date', 'Price', 'Major_Event', 'Year', 'Month',
                         'Price_Lag1', 'Price_Lag2', 'Price_Lag3']
         existing_cols = [c for c in display_cols if c in df.columns]
-        st.dataframe(df[existing_cols], use_container_width=True, height=300)
+        st.dataframe(df[existing_cols], width='stretch', height=300)
         st.download_button(
             "Download Cleaned Data (CSV)",
             df.to_csv(index=False).encode(),
@@ -274,7 +275,7 @@ with tab3:
                               color_continuous_scale='RdBu_r', zmin=-1, zmax=1,
                               title='Feature Correlation Matrix')
         fig_corr.update_layout(height=500, margin=dict(l=0, r=0, t=30, b=0))
-        st.plotly_chart(fig_corr, use_container_width=True)
+        st.plotly_chart(fig_corr, width='stretch')
 
         st.subheader("Price Distribution")
         skewness = df['Price'].skew()
@@ -283,7 +284,7 @@ with tab3:
                                  title=f'Price Distribution (Skew: {skewness:.2f}, Kurtosis: {kurtosis:.2f})')
         fig_hist.update_traces(marker_color='#DAA520')
         fig_hist.update_layout(height=300, margin=dict(l=0, r=0, t=30, b=0))
-        st.plotly_chart(fig_hist, use_container_width=True)
+        st.plotly_chart(fig_hist, width='stretch')
 
     with col2:
         st.subheader("STL Decomposition")
@@ -300,7 +301,7 @@ with tab3:
                                           mode='lines', name='Residual', line=dict(color='gray')))
             fig_stl.update_layout(title='Trend, Seasonal, Residual', height=400,
                                    hovermode='x unified', margin=dict(l=0, r=0, t=30, b=0))
-            st.plotly_chart(fig_stl, use_container_width=True)
+            st.plotly_chart(fig_stl, width='stretch')
 
         st.subheader("ACF / PACF Plots")
         n_lags = 20
@@ -312,14 +313,14 @@ with tab3:
         fig_acf.update_layout(title='Autocorrelation Function (ACF)',
                                height=200, margin=dict(l=0, r=0, t=25, b=0),
                                xaxis_title='Lag', yaxis_title='ACF')
-        st.plotly_chart(fig_acf, use_container_width=True)
+        st.plotly_chart(fig_acf, width='stretch')
         fig_pacf = go.Figure()
         fig_pacf.add_trace(go.Bar(x=list(range(n_lags + 1)), y=pacf_vals,
                                    marker_color='#2B579A', name='PACF'))
         fig_pacf.update_layout(title='Partial Autocorrelation (PACF)',
                                 height=200, margin=dict(l=0, r=0, t=25, b=0),
                                 xaxis_title='Lag', yaxis_title='PACF')
-        st.plotly_chart(fig_pacf, use_container_width=True)
+        st.plotly_chart(fig_pacf, width='stretch')
 
         st.subheader("Rolling Statistics (12-month)")
         df_roll = df.copy()
@@ -335,7 +336,7 @@ with tab3:
         fig_roll.update_layout(title='Gold Price with Rolling Statistics',
                                 hovermode='x unified', height=250,
                                 margin=dict(l=0, r=0, t=25, b=0))
-        st.plotly_chart(fig_roll, use_container_width=True)
+        st.plotly_chart(fig_roll, width='stretch')
 
 # ============================================================
 # TAB 4 — MODEL EVALUATION
@@ -385,13 +386,14 @@ with tab4:
                            xaxis_title='Date', yaxis_title='Gold Price (USD/oz)',
                            hovermode='x unified', height=350,
                            margin=dict(l=0, r=0, t=30, b=0))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
     st.markdown("---")
     col_a, col_b = st.columns(2)
     with col_a:
         st.subheader("Feature Importance")
-        fi_model = st.selectbox("Model", ['Random Forest', 'XGBoost', 'Linear Regression'], key='fi_select2')
+        fi_models = [m for m in models_to_show if m in trainer.feature_importances]
+        fi_model = st.selectbox("Model", fi_models if fi_models else models_to_show, key='fi_select2')
         fi = trainer.feature_importances.get(fi_model)
         if fi is not None:
             feat_df = pd.DataFrame({'feature': fi['names'], 'importance': fi['values']})
@@ -400,7 +402,7 @@ with tab4:
                              title=f'Top Features ({fi_model})',
                              labels={'importance': 'Importance', 'feature': ''})
             fig_fi.update_layout(height=350, margin=dict(l=0, r=0, t=30, b=0))
-            st.plotly_chart(fig_fi, use_container_width=True)
+            st.plotly_chart(fig_fi, width='stretch')
 
     with col_b:
         st.subheader("Residual Analysis")
@@ -414,13 +416,13 @@ with tab4:
         fig_res.update_layout(title=f'Residuals vs Fitted ({res_model})',
                                xaxis_title='Fitted Values', yaxis_title='Residuals',
                                height=300, margin=dict(l=0, r=0, t=30, b=0))
-        st.plotly_chart(fig_res, use_container_width=True)
+        st.plotly_chart(fig_res, width='stretch')
         fig_hist = go.Figure()
         fig_hist.add_trace(go.Histogram(x=residuals, nbinsx=20, marker_color='#DAA520'))
         fig_hist.update_layout(title='Residual Distribution',
                                 xaxis_title='Residual', yaxis_title='Count',
                                 height=200, margin=dict(l=0, r=0, t=20, b=0))
-        st.plotly_chart(fig_hist, use_container_width=True)
+        st.plotly_chart(fig_hist, width='stretch')
 
 # ============================================================
 # TAB 5 — PREDICTION STUDIO
@@ -466,7 +468,7 @@ with tab5:
 
     with col2:
         st.markdown("### Predict Gold Price")
-        model_choice = st.radio("Choose Model", models_to_show, key='pred_model')
+        model_choice = st.selectbox("Choose Model", models_to_show, key='pred_model')
         pred_price = trainer.predict(model_choice, input_dict, loader.feature_cols, loader.lr_features)
         ci = 1.96 * results[model_choice]['RMSE']
 
@@ -512,7 +514,7 @@ with tab5:
                                       xaxis_title='Month Ahead', yaxis_title='Price (USD/oz)',
                                       hovermode='x unified', height=400,
                                       margin=dict(l=0, r=0, t=30, b=0))
-                st.plotly_chart(fig_fc, use_container_width=True)
+                st.plotly_chart(fig_fc, width='stretch')
 
                 fc_main = analyzer.compute_forecast(input_dict, trainer, model_choice,
                                                      loader.feature_cols, loader.lr_features)
@@ -522,7 +524,7 @@ with tab5:
                     'Predicted': [f'${v:.2f}' for v in fc_main]
                 })
                 st.markdown("**Forecast Summary**")
-                st.dataframe(fc_df, use_container_width=True, hide_index=True)
+                st.dataframe(fc_df, width='stretch', hide_index=True)
                 st.markdown(f"""
                 - **Overall Growth:** {growth:+.2f}%
                 - **Highest:** Month {np.argmax(fc_main) + 1} (${max(fc_main):.2f})
@@ -585,7 +587,7 @@ with tab6:
     col1, col2 = st.columns([1, 1])
     with col1:
         st.markdown("### Event Statistics")
-        st.dataframe(stats, use_container_width=True)
+        st.dataframe(stats, width='stretch')
 
         st.markdown("### Gold Price Trend with Events")
         event_dates_map = loader.get_event_dates()
@@ -607,7 +609,7 @@ with tab6:
                               xaxis_title='Date', yaxis_title='Price (USD/oz)',
                               hovermode='x unified', height=400,
                               margin=dict(l=0, r=0, t=30, b=0))
-        st.plotly_chart(fig_ev, use_container_width=True)
+        st.plotly_chart(fig_ev, width='stretch')
 
     with col2:
         st.markdown("### Event Comparison")
@@ -632,7 +634,7 @@ with tab6:
         fig_comp.update_layout(title='Event Comparison Overlay',
                                 xaxis_title='Date', yaxis_title='Price (USD/oz)',
                                 height=350, margin=dict(l=0, r=0, t=30, b=0))
-        st.plotly_chart(fig_comp, use_container_width=True)
+        st.plotly_chart(fig_comp, width='stretch')
 
         st.markdown("### Insights")
         has_events = any(ev in stats.index for ev in event_windows)
@@ -660,7 +662,7 @@ with tab6:
                           title='Monthly Return Std Dev by Event')
         fig_vol.update_layout(showlegend=False, height=300,
                                margin=dict(l=0, r=0, t=30, b=0))
-        st.plotly_chart(fig_vol, use_container_width=True)
+        st.plotly_chart(fig_vol, width='stretch')
 
         st.download_button(
             "Download Event Statistics (CSV)",

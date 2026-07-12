@@ -6,3 +6,14 @@ venv/
 *.egg-info/
 dist/
 .vscode/
+
+# Extra junk
+Hamizah_sem4_extra files/
+.agents/
+skills-lock.json
+styles.css
+streamlit_*.log
+streamlit_*.err
+output/
+!output/.gitkeep
+git/

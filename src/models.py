@@ -4,8 +4,13 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.neural_network import MLPRegressor
-from xgboost import XGBRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
+try:
+    from xgboost import XGBRegressor
+    XGB_AVAILABLE = True
+except ImportError:
+    XGB_AVAILABLE = False
 
 class ModelTrainer:
     def __init__(self):
@@ -36,7 +41,7 @@ class ModelTrainer:
             'names': data_dict.get('lr_feature_names', [f'f{i}' for i in range(len(lr.coef_))])
         }
 
-        rf = RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=-1)
+        rf = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=1)
         rf.fit(X_train_s, y_train_s)
         self.trained_models['Random Forest'] = (rf, X_test_s, self.scaler_X, 'full')
         self.feature_importances['Random Forest'] = {
@@ -44,16 +49,17 @@ class ModelTrainer:
             'names': data_dict.get('feature_names', [f'f{i}' for i in range(len(rf.feature_importances_))])
         }
 
-        xgb = XGBRegressor(n_estimators=200, learning_rate=0.05, random_state=42, verbosity=0)
-        xgb.fit(X_train_s, y_train_s)
-        self.trained_models['XGBoost'] = (xgb, X_test_s, self.scaler_X, 'full')
-        self.feature_importances['XGBoost'] = {
-            'values': xgb.feature_importances_,
-            'names': data_dict.get('feature_names', [f'f{i}' for i in range(len(xgb.feature_importances_))])
-        }
+        if XGB_AVAILABLE:
+            xgb = XGBRegressor(n_estimators=100, learning_rate=0.05, random_state=42, verbosity=0, n_jobs=1)
+            xgb.fit(X_train_s, y_train_s)
+            self.trained_models['XGBoost'] = (xgb, X_test_s, self.scaler_X, 'full')
+            self.feature_importances['XGBoost'] = {
+                'values': xgb.feature_importances_,
+                'names': data_dict.get('feature_names', [f'f{i}' for i in range(len(xgb.feature_importances_))])
+            }
 
-        nn = MLPRegressor(hidden_layer_sizes=(128, 64, 32), activation='relu',
-                          solver='adam', max_iter=500, random_state=42, early_stopping=True)
+        nn = MLPRegressor(hidden_layer_sizes=(64, 32), activation='relu',
+                          solver='adam', max_iter=200, random_state=42, early_stopping=True)
         nn.fit(X_train_s, y_train_s)
         self.trained_models['Neural Network'] = (nn, X_test_s, self.scaler_X, 'full')
 
